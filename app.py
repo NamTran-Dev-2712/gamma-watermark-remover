@@ -34,7 +34,7 @@ pptx_processor = PPTXProcessor()
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.post("/remove_watermark")
@@ -45,20 +45,16 @@ async def remove_watermark(request: Request, pdf_file: UploadFile = File(...)):
     """
     if not pdf_file.filename:
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {
-                "request": request,
-                "error_message": "No file selected. Please choose a PDF or PPTX file.",
-            },
+            context={"error_message": "No file selected. Please choose a PDF or PPTX file."},
         )
 
     if not allowed_file(pdf_file.filename):
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {
-                "request": request,
-                "error_message": "Invalid file type. Please upload a PDF or PowerPoint (.pptx) file.",
-            },
+            context={"error_message": "Invalid file type. Please upload a PDF or PowerPoint (.pptx) file."},
         )
 
     # Extract extension before secure_filename to handle Unicode filenames
@@ -81,11 +77,9 @@ async def remove_watermark(request: Request, pdf_file: UploadFile = File(...)):
     # Additional validation: ensure we have a valid extension
     if not file_extension:
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {
-                "request": request,
-                "error_message": "Invalid file name. Please upload a file with a proper extension (.pdf or .pptx).",
-            },
+            context={"error_message": "Invalid file name. Please upload a file with a proper extension (.pdf or .pptx)."},
         )
 
     # Create temp file with appropriate extension
@@ -106,21 +100,17 @@ async def remove_watermark(request: Request, pdf_file: UploadFile = File(...)):
                 return await _process_pptx(request, upload_path, filename)
             else:
                 return templates.TemplateResponse(
+                    request,
                     "index.html",
-                    {
-                        "request": request,
-                        "error_message": f"Unsupported file type: {file_extension}",
-                    },
+                    context={"error_message": f"Unsupported file type: {file_extension}"},
                 )
 
         except Exception as e:
             logger.error(f"Error processing file: {str(e)}")
             return templates.TemplateResponse(
+                request,
                 "index.html",
-                {
-                    "request": request,
-                    "error_message": f"Error processing file: {str(e)}",
-                },
+                context={"error_message": f"Error processing file: {str(e)}"},
             )
 
         finally:
@@ -140,13 +130,13 @@ async def _process_pdf(request: Request, upload_path: str, filename: str):
     if not result["success"]:
         raise Exception(result["error"])
 
-    template_data = {"request": request, "success_message": result["message"]}
+    template_data: dict = {"success_message": result["message"]}
 
     if result["has_watermark"]:
         template_data["download_filename"] = output_filename
         template_data["file_type"] = "pdf"
 
-    return templates.TemplateResponse("index.html", template_data)
+    return templates.TemplateResponse(request, "index.html", context=template_data)
 
 
 async def _process_pptx(request: Request, upload_path: str, filename: str):
@@ -159,13 +149,13 @@ async def _process_pptx(request: Request, upload_path: str, filename: str):
     if not result["success"]:
         raise Exception(result["error"])
 
-    template_data = {"request": request, "success_message": result["message"]}
+    template_data: dict = {"success_message": result["message"]}
 
     if result["has_watermark"]:
         template_data["download_filename"] = output_filename
         template_data["file_type"] = "pptx"
 
-    return templates.TemplateResponse("index.html", template_data)
+    return templates.TemplateResponse(request, "index.html", context=template_data)
 
 
 # ===========================
@@ -195,13 +185,15 @@ async def download_processed_file(filename: str):
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     if exc.status_code == 404:
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {"request": request, "error_message": "Page not found."},
+            context={"error_message": "Page not found."},
             status_code=404,
         )
     return templates.TemplateResponse(
+        request,
         "index.html",
-        {"request": request, "error_message": f"Server error: {exc.detail}"},
+        context={"error_message": f"Server error: {exc.detail}"},
         status_code=exc.status_code,
     )
 
@@ -209,8 +201,9 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     return templates.TemplateResponse(
+        request,
         "index.html",
-        {"request": request, "error_message": f"Internal server error: {str(exc)}"},
+        context={"error_message": f"Internal server error: {str(exc)}"},
         status_code=500,
     )
 
