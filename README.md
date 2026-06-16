@@ -15,7 +15,7 @@ Requires Python 3.7+.
 
 1. Clone the repo:
    ```bash
-   git clone https://github.com/TranNam2712-Dev/gamma-watermark-remover.git
+   git clone https://github.com/NamTran-Dev-2712/gamma-watermark-remover.git
    cd gamma-watermark-remover
    ```
 
